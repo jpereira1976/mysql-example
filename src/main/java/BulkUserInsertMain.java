@@ -11,6 +11,7 @@ public class BulkUserInsertMain {
 
     public static void main(String[] args) throws Exception {
         new BulkUserInsertMain().run();
+        System.exit(0);
     }
 
     private DataSource createPool() {
