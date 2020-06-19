@@ -29,29 +29,6 @@ public class JDBCConnectionTest {
             }
         }, "compra").start();
 
-        Object object = new Object();
-        synchronized (object) {
-            object.wait();
-        }
-    }
-
-    private void comprar(int idCuenta, double valor) throws SQLException {
-        Connection connection = null;
-        try {
-            connection = DriverManager
-                    .getConnection(url,
-                            user, password);
-
-            connection.setAutoCommit(false);//begin_transaction
-
-            double saldo = saldo(connection, idCuenta);
-
-            actualizarSaldo(connection, idCuenta, saldo - valor );
-
-            connection.commit();
-        } catch (Exception e) {
-            connection.rollback();
-        }
     }
 
     private void crearCuentas() throws SQLException {
@@ -71,6 +48,25 @@ public class JDBCConnectionTest {
             connection.rollback();
         }
 
+    }
+
+    private void comprar(int idCuenta, double valor) throws SQLException {
+        Connection connection = null;
+        try {
+            connection = DriverManager
+                    .getConnection(url,
+                            user, password);
+
+            connection.setAutoCommit(false);//begin_transaction
+
+            double saldo = saldo(connection, idCuenta);
+
+            actualizarSaldo(connection, idCuenta, saldo - valor );
+
+            connection.commit();
+        } catch (Exception e) {
+            connection.rollback();
+        }
     }
 
     private void transferir(int idOrigen, int idDestino, double valor) throws SQLException {
@@ -96,7 +92,8 @@ public class JDBCConnectionTest {
     }
 
     private void actualizarSaldo(Connection connection, int idCuenta, double saldoCuenta) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement("update cuentas set saldo = ? where id = ?")) {
+        try (PreparedStatement ps = connection.prepareStatement("update cuentas set saldo = ? where id = ?", ResultSet.TYPE_FORWARD_ONLY,
+                ResultSet.CONCUR_UPDATABLE)) {
             ps.setDouble(1, saldoCuenta);
             ps.setInt(2, idCuenta);
             ps.execute();
@@ -104,7 +101,7 @@ public class JDBCConnectionTest {
     }
 
     private double saldo(Connection connection, int idCuenta) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement("select * from cuentas where id = ?")) {
+        try (PreparedStatement ps = connection.prepareStatement("select * from cuentas where id = ? for update")) {
             ps.setInt(1, idCuenta);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
